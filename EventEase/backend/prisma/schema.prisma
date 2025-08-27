@@ -1,0 +1,100 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      UserRole @default(EVENT_OWNER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  events    Event[]  @relation("EventOrganizer")
+  rsvps     RSVP[]
+
+  @@map("users")
+}
+
+model Event {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  date        DateTime
+  time        String
+  location    String
+  maxAttendees Int?
+  category    String?
+  imageUrl    String?
+  status      EventStatus @default(ACTIVE)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  organizerId String
+  organizer   User   @relation("EventOrganizer", fields: [organizerId], references: [id])
+  rsvps       RSVP[]
+  customFields CustomField[]
+
+  @@map("events")
+}
+
+model CustomField {
+  id       String @id @default(cuid())
+  label    String
+  type     String
+  required Boolean @default(false)
+  options  String? // For select fields
+  
+  // Relations
+  eventId  String
+  event    Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@map("custom_fields")
+}
+
+model RSVP {
+  id        String   @id @default(cuid())
+  status    RSVPStatus @default(PENDING)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  userId    String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  eventId   String
+  event     Event   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, eventId])
+  @@map("rsvps")
+}
+
+enum UserRole {
+  ADMIN
+  STAFF
+  EVENT_OWNER
+}
+
+enum EventStatus {
+  ACTIVE
+  CANCELLED
+  COMPLETED
+  DRAFT
+}
+
+enum RSVPStatus {
+  PENDING
+  CONFIRMED
+  DECLINED
+  CANCELLED
+} 
